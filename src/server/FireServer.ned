@@ -1,4 +1,4 @@
-package forestfiresim;
+package forestfiresim.server;
 
 //
 // FireServer.ned

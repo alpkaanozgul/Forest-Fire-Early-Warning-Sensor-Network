@@ -1,4 +1,4 @@
-package forestfiresim;
+package forestfiresim.sensor;
 
 //
 // SensorApp.ned

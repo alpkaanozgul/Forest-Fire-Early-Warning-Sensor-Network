@@ -1,4 +1,4 @@
-package forestfiresim;
+package forestfiresim.fire;
 
 //
 // FireGen.ned
