@@ -179,6 +179,7 @@ void AlarmMsg::copy(const AlarmMsg& other)
 {
     this->sensorId = other.sensorId;
     this->timestamp = other.timestamp;
+    this->fireEventTimestamp = other.fireEventTimestamp;
     this->sensorReading = other.sensorReading;
     this->isFire_ = other.isFire_;
     this->isFalseAlarm_ = other.isFalseAlarm_;
@@ -190,6 +191,7 @@ void AlarmMsg::parsimPack(omnetpp::cCommBuffer *b) const
     ::omnetpp::cMessage::parsimPack(b);
     doParsimPacking(b,this->sensorId);
     doParsimPacking(b,this->timestamp);
+    doParsimPacking(b,this->fireEventTimestamp);
     doParsimPacking(b,this->sensorReading);
     doParsimPacking(b,this->isFire_);
     doParsimPacking(b,this->isFalseAlarm_);
@@ -201,6 +203,7 @@ void AlarmMsg::parsimUnpack(omnetpp::cCommBuffer *b)
     ::omnetpp::cMessage::parsimUnpack(b);
     doParsimUnpacking(b,this->sensorId);
     doParsimUnpacking(b,this->timestamp);
+    doParsimUnpacking(b,this->fireEventTimestamp);
     doParsimUnpacking(b,this->sensorReading);
     doParsimUnpacking(b,this->isFire_);
     doParsimUnpacking(b,this->isFalseAlarm_);
@@ -225,6 +228,16 @@ double AlarmMsg::getTimestamp() const
 void AlarmMsg::setTimestamp(double timestamp)
 {
     this->timestamp = timestamp;
+}
+
+double AlarmMsg::getFireEventTimestamp() const
+{
+    return this->fireEventTimestamp;
+}
+
+void AlarmMsg::setFireEventTimestamp(double fireEventTimestamp)
+{
+    this->fireEventTimestamp = fireEventTimestamp;
 }
 
 double AlarmMsg::getSensorReading() const
@@ -274,6 +287,7 @@ class AlarmMsgDescriptor : public omnetpp::cClassDescriptor
     enum FieldConstants {
         FIELD_sensorId,
         FIELD_timestamp,
+        FIELD_fireEventTimestamp,
         FIELD_sensorReading,
         FIELD_isFire,
         FIELD_isFalseAlarm,
@@ -344,7 +358,7 @@ const char *AlarmMsgDescriptor::getProperty(const char *propertyName) const
 int AlarmMsgDescriptor::getFieldCount() const
 {
     omnetpp::cClassDescriptor *base = getBaseClassDescriptor();
-    return base ? 6+base->getFieldCount() : 6;
+    return base ? 7+base->getFieldCount() : 7;
 }
 
 unsigned int AlarmMsgDescriptor::getFieldTypeFlags(int field) const
@@ -358,12 +372,13 @@ unsigned int AlarmMsgDescriptor::getFieldTypeFlags(int field) const
     static unsigned int fieldTypeFlags[] = {
         FD_ISEDITABLE,    // FIELD_sensorId
         FD_ISEDITABLE,    // FIELD_timestamp
+        FD_ISEDITABLE,    // FIELD_fireEventTimestamp
         FD_ISEDITABLE,    // FIELD_sensorReading
         FD_ISEDITABLE,    // FIELD_isFire
         FD_ISEDITABLE,    // FIELD_isFalseAlarm
         FD_ISEDITABLE,    // FIELD_zoneId
     };
-    return (field >= 0 && field < 6) ? fieldTypeFlags[field] : 0;
+    return (field >= 0 && field < 7) ? fieldTypeFlags[field] : 0;
 }
 
 const char *AlarmMsgDescriptor::getFieldName(int field) const
@@ -377,12 +392,13 @@ const char *AlarmMsgDescriptor::getFieldName(int field) const
     static const char *fieldNames[] = {
         "sensorId",
         "timestamp",
+        "fireEventTimestamp",
         "sensorReading",
         "isFire",
         "isFalseAlarm",
         "zoneId",
     };
-    return (field >= 0 && field < 6) ? fieldNames[field] : nullptr;
+    return (field >= 0 && field < 7) ? fieldNames[field] : nullptr;
 }
 
 int AlarmMsgDescriptor::findField(const char *fieldName) const
@@ -391,10 +407,11 @@ int AlarmMsgDescriptor::findField(const char *fieldName) const
     int baseIndex = base ? base->getFieldCount() : 0;
     if (strcmp(fieldName, "sensorId") == 0) return baseIndex + 0;
     if (strcmp(fieldName, "timestamp") == 0) return baseIndex + 1;
-    if (strcmp(fieldName, "sensorReading") == 0) return baseIndex + 2;
-    if (strcmp(fieldName, "isFire") == 0) return baseIndex + 3;
-    if (strcmp(fieldName, "isFalseAlarm") == 0) return baseIndex + 4;
-    if (strcmp(fieldName, "zoneId") == 0) return baseIndex + 5;
+    if (strcmp(fieldName, "fireEventTimestamp") == 0) return baseIndex + 2;
+    if (strcmp(fieldName, "sensorReading") == 0) return baseIndex + 3;
+    if (strcmp(fieldName, "isFire") == 0) return baseIndex + 4;
+    if (strcmp(fieldName, "isFalseAlarm") == 0) return baseIndex + 5;
+    if (strcmp(fieldName, "zoneId") == 0) return baseIndex + 6;
     return base ? base->findField(fieldName) : -1;
 }
 
@@ -409,12 +426,13 @@ const char *AlarmMsgDescriptor::getFieldTypeString(int field) const
     static const char *fieldTypeStrings[] = {
         "int",    // FIELD_sensorId
         "double",    // FIELD_timestamp
+        "double",    // FIELD_fireEventTimestamp
         "double",    // FIELD_sensorReading
         "bool",    // FIELD_isFire
         "bool",    // FIELD_isFalseAlarm
         "int",    // FIELD_zoneId
     };
-    return (field >= 0 && field < 6) ? fieldTypeStrings[field] : nullptr;
+    return (field >= 0 && field < 7) ? fieldTypeStrings[field] : nullptr;
 }
 
 const char **AlarmMsgDescriptor::getFieldPropertyNames(int field) const
@@ -499,6 +517,7 @@ std::string AlarmMsgDescriptor::getFieldValueAsString(omnetpp::any_ptr object, i
     switch (field) {
         case FIELD_sensorId: return long2string(pp->getSensorId());
         case FIELD_timestamp: return double2string(pp->getTimestamp());
+        case FIELD_fireEventTimestamp: return double2string(pp->getFireEventTimestamp());
         case FIELD_sensorReading: return double2string(pp->getSensorReading());
         case FIELD_isFire: return bool2string(pp->isFire());
         case FIELD_isFalseAlarm: return bool2string(pp->isFalseAlarm());
@@ -521,6 +540,7 @@ void AlarmMsgDescriptor::setFieldValueAsString(omnetpp::any_ptr object, int fiel
     switch (field) {
         case FIELD_sensorId: pp->setSensorId(string2long(value)); break;
         case FIELD_timestamp: pp->setTimestamp(string2double(value)); break;
+        case FIELD_fireEventTimestamp: pp->setFireEventTimestamp(string2double(value)); break;
         case FIELD_sensorReading: pp->setSensorReading(string2double(value)); break;
         case FIELD_isFire: pp->setIsFire(string2bool(value)); break;
         case FIELD_isFalseAlarm: pp->setIsFalseAlarm(string2bool(value)); break;
@@ -541,6 +561,7 @@ omnetpp::cValue AlarmMsgDescriptor::getFieldValue(omnetpp::any_ptr object, int f
     switch (field) {
         case FIELD_sensorId: return pp->getSensorId();
         case FIELD_timestamp: return pp->getTimestamp();
+        case FIELD_fireEventTimestamp: return pp->getFireEventTimestamp();
         case FIELD_sensorReading: return pp->getSensorReading();
         case FIELD_isFire: return pp->isFire();
         case FIELD_isFalseAlarm: return pp->isFalseAlarm();
@@ -563,6 +584,7 @@ void AlarmMsgDescriptor::setFieldValue(omnetpp::any_ptr object, int field, int i
     switch (field) {
         case FIELD_sensorId: pp->setSensorId(omnetpp::checked_int_cast<int>(value.intValue())); break;
         case FIELD_timestamp: pp->setTimestamp(value.doubleValue()); break;
+        case FIELD_fireEventTimestamp: pp->setFireEventTimestamp(value.doubleValue()); break;
         case FIELD_sensorReading: pp->setSensorReading(value.doubleValue()); break;
         case FIELD_isFire: pp->setIsFire(value.boolValue()); break;
         case FIELD_isFalseAlarm: pp->setIsFalseAlarm(value.boolValue()); break;

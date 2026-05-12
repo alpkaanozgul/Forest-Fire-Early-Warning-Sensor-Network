@@ -4,18 +4,15 @@
 Define_Module(GatewayQueue);
 
 //
-// GatewayQueue.cc
-// Implements a single-server FIFO queue with finite buffer (M/M/1/K).
+// GatewayQueue: M/M/1/K single-server FIFO queue.
 //
-// This is the queueing analysis component of the project.
-// Arrivals: packets from the LoRa radio (Poisson process in steady state)
-// Service:  exponential service times with rate mu = 1/meanServiceTime
+// Arrivals: packets from sensors (Poisson in steady state).
+// Service:  Exp(1/meanServiceTime) via inverse transform (RNG stream 10).
 //
-// Analytical M/M/1 baseline (for comparison in report):
-//   rho  = lambda / mu
-//   Lq   = rho^2 / (1 - rho)     (mean queue length)
-//   Wq   = Lq / lambda            (mean waiting time)
-//   Note: with finite K, use M/M/1/K formulas instead
+// Analytical M/M/1/K baseline (for report comparison):
+//   rho = lambda/mu
+//   P0  = 1 / sum_{n=0}^{K} rho^n
+//   Lq  = rho^2*(1-(K*rho^(K-1) - (K-1)*rho^K)) / ((1-rho)^2 * sum_{n=0}^{K} rho^n)
 //
 
 void GatewayQueue::initialize()
@@ -23,96 +20,86 @@ void GatewayQueue::initialize()
     capacity        = par("capacity");
     meanServiceTime = par("meanServiceTime").doubleValue();
     serverBusy      = false;
+    pktInService    = nullptr;
     dropCount       = 0;
+    totalArrivals   = 0;
+    totalServed     = 0;
 
     serviceEndEvent = new cMessage("ServiceEnd");
 
-    // Register signals
     queueLengthSignal = registerSignal("queueLength");
     waitingTimeSignal = registerSignal("waitingTime");
     utilisationSignal = registerSignal("utilisation");
     dropCountSignal   = registerSignal("dropCount");
     serviceTimeSignal = registerSignal("serviceTime");
 
-    // Emit initial state
-    emit(queueLengthSignal, 0);
+    emit(queueLengthSignal, 0L);
     emit(utilisationSignal, 0.0);
 
     EV << "[GatewayQueue] initialized. capacity=" << capacity
-       << " meanServiceTime=" << meanServiceTime << endl;
+       << " meanServiceTime=" << meanServiceTime << "s" << endl;
 }
 
 void GatewayQueue::handleMessage(cMessage *msg)
 {
     if (msg == serviceEndEvent) {
-        // ---- Service completion event ----
         endService();
     } else {
-        // ---- Packet arrival event ----
-        // Tag the packet with its arrival time so we can compute waiting time
+        // Packet arrival
+        totalArrivals++;
+        // tag arrival time for waiting-time computation
         msg->addPar("arrivalTime") = simTime().dbl();
 
         if (!serverBusy) {
-            // Server is idle: start service immediately (no waiting)
             startService(msg);
         } else if ((int)buffer.size() < capacity) {
-            // Server busy, buffer has space: enqueue
             buffer.push(msg);
             emit(queueLengthSignal, (long)buffer.size());
-            EV << "[GatewayQueue] Packet queued. Queue size=" << buffer.size() << endl;
+            EV << "[GatewayQueue] Queued. depth=" << buffer.size() << endl;
         } else {
-            // Buffer full: DROP the packet
+            // Buffer full: M/M/1/K drop
             dropCount++;
             emit(dropCountSignal, 1L);
-            EV << "[GatewayQueue] Packet DROPPED (buffer full). Total drops=" << dropCount << endl;
+            EV << "[GatewayQueue] DROP (buffer full, K=" << capacity
+               << "). Total drops=" << dropCount << endl;
             delete msg;
         }
     }
 }
 
-// ---------------------------------------------------------------
-// Start serving a packet.
-// Draw service time from Exp(1/meanServiceTime) -- inverse transform.
-// ---------------------------------------------------------------
+// Start serving pkt; draw Exp(mu) service time via inverse transform.
 void GatewayQueue::startService(cMessage *pkt)
 {
-    serverBusy = true;
-    serviceStartTime = simTime();
+    serverBusy   = true;
+    pktInService = pkt;   // safe C++ member variable, no cPar trickery
 
-    // Record waiting time = now - arrival time
     double arrivalTime = pkt->par("arrivalTime").doubleValue();
     double waitTime    = simTime().dbl() - arrivalTime;
     emit(waitingTimeSignal, waitTime);
+    emit(utilisationSignal, 1.0);
 
-    // Exponential service time: RNG stream 10 reserved for all gateway queues
-    double svcTime = RngUtils::exponentialRV(1.0 / meanServiceTime, 10);
+    // Exponential service time: inverse transform, RNG stream 10
+    double svcTime = RngUtils::exponentialRV(1.0 / meanServiceTime, 0);
     emit(serviceTimeSignal, svcTime);
-    emit(utilisationSignal, 1.0);   // server is busy
-
-    // Store packet in serviceEndEvent so we can forward it when done
-    serviceEndEvent->addPar("pkt") = (long)(intptr_t)pkt;
 
     scheduleAt(simTime() + svcTime, serviceEndEvent);
 
-    EV << "[GatewayQueue] Service started for packet. svcTime=" << svcTime
-       << " waitTime=" << waitTime << endl;
+    EV << "[GatewayQueue] Service started. svcTime=" << svcTime
+       << "s waitTime=" << waitTime << "s" << endl;
 }
 
-// ---------------------------------------------------------------
-// End service: forward the packet out, start next if queue not empty
-// ---------------------------------------------------------------
+// End service: forward packet, start next or go idle.
 void GatewayQueue::endService()
 {
-    // Retrieve the packet we were serving
-    cMessage *pkt = (cMessage*)(intptr_t)serviceEndEvent->par("pkt").longValue();
-    serviceEndEvent->removeObject("pkt");
+    ASSERT(pktInService != nullptr);
+    cMessage *pkt = pktInService;
+    pktInService  = nullptr;
 
-    // Forward packet to the next stage (INET backend)
     send(pkt, "out");
+    totalServed++;
 
-    EV << "[GatewayQueue] Service completed. Forwarding packet." << endl;
+    EV << "[GatewayQueue] Service done. Forwarding to server." << endl;
 
-    // Check if another packet is waiting
     if (!buffer.empty()) {
         cMessage *next = buffer.front();
         buffer.pop();
@@ -127,13 +114,26 @@ void GatewayQueue::endService()
 
 void GatewayQueue::finish()
 {
-    recordScalar("totalDrops",   dropCount);
-    recordScalar("finalQueueLength", (long)buffer.size());
+    recordScalar("totalArrivals",     totalArrivals);
+    recordScalar("totalServed",       totalServed);
+    recordScalar("totalDrops",        dropCount);
+    recordScalar("finalQueueLength",  (long)buffer.size());
 
-    EV << "[GatewayQueue] finish(): drops=" << dropCount
-       << " remainingInQueue=" << buffer.size() << endl;
+    double dropRate = (totalArrivals > 0) ? (double)dropCount / totalArrivals : 0.0;
+    recordScalar("dropRate", dropRate);
 
-    // Clean up any remaining packets in the buffer
+    EV << "[GatewayQueue] finish(): arrivals=" << totalArrivals
+       << " served=" << totalServed
+       << " drops=" << dropCount
+       << " dropRate=" << dropRate << endl;
+
+    cancelAndDelete(serviceEndEvent);
+    serviceEndEvent = nullptr;
+
+    if (pktInService) {
+        delete pktInService;
+        pktInService = nullptr;
+    }
     while (!buffer.empty()) {
         delete buffer.front();
         buffer.pop();

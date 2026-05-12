@@ -1,46 +1,37 @@
 package forestfiresim.sensor;
 
 //
-// SensorApp.ned
-// The application layer running on each LoRa sensor node.
-// Handles periodic telemetry, fire detection, false alarms,
-// and retransmission logic.
+// SensorApp: LoRa sensor node application.
+// Generates Exp-distributed telemetry and Bernoulli fire alarms.
 //
 simple SensorApp
 {
     parameters:
         int    nodeId = default(0);
-        int    zoneId = default(0);          // which forest zone this sensor is in
+        int    zoneId = default(0);
 
-        // Telemetry scheduling
         double meanTelemetryInterval @unit(s) = default(60s);
 
-        // Detection probabilities
-        double fireDetectionProb  = default(0.90);  // pd: Bernoulli trial on real fire
-        double falseAlarmProb     = default(0.01);  // pf: Bernoulli trial each cycle
+        double fireDetectionProb  = default(0.90);
+        double falseAlarmProb     = default(0.01);
 
-        // Normal environmental baselines (used for Normal variate generation)
-        double baseTempMu    = default(25.0);   // degrees C
+        double baseTempMu    = default(25.0);
         double baseTempSigma = default(3.0);
-        double baseHumMu     = default(60.0);   // percent
+        double baseHumMu     = default(60.0);
         double baseHumSigma  = default(5.0);
-
-        // Thresholds above which a reading is considered fire-risk
         double tempThreshold  = default(60.0);
         double smokeThreshold = default(0.7);
 
-        @display("i=block/app");
+        @display("i=misc/sensor2");
 
-        // Statistics collected automatically by OMNeT++
-        @statistic[e2eDelay](title="end-to-end delay"; unit=s; record=mean,max,vector);
-        @statistic[alarmsSent](title="alarms sent"; record=sum,vector);
-        @statistic[telemetrySent](title="telemetry sent"; record=sum);
+        @signal[alarmsSent](type=long);
+        @signal[telemetrySent](type=long);
+
+        @statistic[alarmsSent](title="alarms sent"; source=alarmsSent; record=sum,vector; checkSignals=false);
+        @statistic[telemetrySent](title="telemetry sent"; source=telemetrySent; record=sum; checkSignals=false);
 
     gates:
-        // Gate for receiving fire notifications directly from FireGen
-        input directIn @directIn;
-
-        // Gates to/from the LoRa radio layer below
-        input  lowerLayerIn;
-        output lowerLayerOut;
+        input  socketIn;
+        output socketOut;
+        input  directIn @directIn;
 }

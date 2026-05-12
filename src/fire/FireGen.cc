@@ -4,14 +4,23 @@
 Define_Module(FireGen);
 
 //
-// FireGen.cc
-// Implements a Poisson process of fire ignition events.
+// FireGen: global Poisson fire ignition generator.
 //
-// Flow:
-//   initialize() -> scheduleNextFire()
-//   handleMessage() fires -> notifyNearbySensors() -> scheduleNextFire()
+// Inter-arrival time ~ Exp(λ_fire) via inverse transform:
+//   t = -(1/λ) * ln(U),  U ~ Uniform(0,1)
 //
-// RNG stream index 3 is reserved for FireGen (see omnetpp.ini comments).
+// RNG stream 3 is reserved for FireGen.
+//
+// On each ignition event the generator:
+//   1. Picks a random zone (Discrete Uniform)
+//   2. Sends a "FireInZone" notification to every sensor via sendDirect
+//      (sensors whose zoneId matches respond with a Bernoulli detection trial)
+//   3. Schedules the next fire event
+//
+// The notification carries:
+//   zoneId    - which zone ignited
+//   timestamp - simTime() at ignition (stored in AlarmMsg.fireEventTimestamp
+//               for D_alarm computation at FireServer)
 //
 
 void FireGen::initialize()
@@ -22,68 +31,54 @@ void FireGen::initialize()
     numZones        = par("numZones");
     totalFireEvents = 0;
 
-    // self-message token — we reuse this same object every time
     fireEvent = new cMessage("FireIgnitionEvent");
-
-    // schedule the first fire
     scheduleNextFire();
 
-    EV << "[FireGen] initialized. fireRate=" << fireRate
-       << " numNodes=" << numNodes << endl;
+    EV << "[FireGen] init. λ_fire=" << fireRate
+       << "/s  numZones=" << numZones
+       << "  numNodes=" << numNodes << endl;
 }
 
 void FireGen::handleMessage(cMessage *msg)
 {
-    // The only message this module ever receives is its own fireEvent
     ASSERT(msg == fireEvent);
 
     totalFireEvents++;
 
-    // Pick a random zone where the fire starts
-    // Discrete Uniform {0, ..., numZones-1}
-    int zoneId = RngUtils::discreteUniformRV(numZones, 3) - 1;
+    // Uniform zone selection: Discrete Uniform {0 .. numZones-1}
+    // (Uses inverse transform for discrete distributions via discreteUniformRV)
+    int zoneId = RngUtils::discreteUniformRV(numZones, 0) - 1;
 
-    EV << "[FireGen] Fire ignition event #" << totalFireEvents
-       << " at t=" << simTime() << " in zone " << zoneId << endl;
+    EV << "[FireGen] Ignition #" << totalFireEvents
+       << "  zone=" << zoneId
+       << "  t=" << simTime() << endl;
 
-    // Tell all sensors in this zone that a fire occurred
     notifyNearbySensors(zoneId);
-
-    // Schedule the next fire event
     scheduleNextFire();
 }
 
+// Exponential inter-arrival: X = -(1/λ) * ln(U)  (inverse CDF, RNG stream 3)
 void FireGen::scheduleNextFire()
 {
-    // Inter-arrival time ~ Exp(fireRate), generated via inverse transform
-    // RNG stream 3 is dedicated to FireGen
-    double interArrival = RngUtils::exponentialRV(fireRate, 3);
-    scheduleAt(simTime() + interArrival, fireEvent);
+    double ia = RngUtils::exponentialRV(fireRate, 1);
+    scheduleAt(simTime() + ia, fireEvent);
 }
 
 void FireGen::notifyNearbySensors(int zoneId)
 {
-    // We signal sensor nodes by sending them a cMessage("FireInZone").
-    // Each SensorApp checks its own zoneId and responds with a Bernoulli trial.
-    //
-    // getModuleByPath searches the simulation for sibling modules.
-    // Naming convention: the network has node[0], node[1], ... node[N-1]
-
+    // Sensor modules are named "node[0]", "node[1]", ... in ForestFire.ned.
+    // Each node is a SensorApp simple module with a @directIn "directIn" gate.
     cModule *network = getParentModule();
 
     for (int i = 0; i < numNodes; i++) {
-        // Build path like "node[5].app"
-        std::string path = std::string("node[") + std::to_string(i) + "].app";
-        cModule *appMod = network->getModuleByPath(path.c_str());
+        std::string path = std::string("node[") + std::to_string(i) + "]";
+        cModule *sensorMod = network->getModuleByPath(path.c_str());
 
-        if (appMod != nullptr) {
-            // Create a lightweight notification message
+        if (sensorMod) {
             cMessage *notify = new cMessage("FireInZone");
-            notify->addPar("zoneId") = zoneId;
-            notify->addPar("timestamp") = simTime().dbl();
-
-            // Send directly into the module's message queue
-            sendDirect(notify, appMod, "directIn");
+            notify->addPar("zoneId")    = zoneId;
+            notify->addPar("timestamp") = simTime().dbl();  // for D_alarm
+            sendDirect(notify, sensorMod, "directIn");
         }
     }
 }
@@ -91,6 +86,5 @@ void FireGen::notifyNearbySensors(int zoneId)
 void FireGen::finish()
 {
     recordScalar("totalFireEvents", totalFireEvents);
-    EV << "[FireGen] Simulation ended. Total fire events: "
-       << totalFireEvents << endl;
+    EV << "[FireGen] Total ignitions: " << totalFireEvents << endl;
 }

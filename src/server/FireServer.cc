@@ -6,30 +6,31 @@ using namespace forestfiresim;
 Define_Module(FireServer);
 
 //
-// FireServer.cc
-// The sink of the simulation. All packets end up here.
-// Records end-to-end delay and packet counts for PDR calculation.
+// FireServer: collects all statistics at the simulation sink.
 //
-// End-to-end delay = simTime() - packet.timestamp
-// This captures: sensor processing + LoRa transmission + gateway queue + INET
+// D_alarm = simTime() - alarm->getFireEventTimestamp()
+//   -> measures the true end-to-end alarm delay from fire occurrence.
+//
+// E2E delay = simTime() - msg->getTimestamp()
+//   -> measures transmission latency from when the sensor created the packet.
 //
 
 void FireServer::initialize()
 {
-    numNodes           = par("numNodes");
-    packetsReceived    = 0;
-    alarmsReceived     = 0;
+    numNodes            = par("numNodes");
+    packetsReceived     = 0;
+    alarmsReceived      = 0;
     falseAlarmsReceived = 0;
-    telemetryReceived  = 0;
+    telemetryReceived   = 0;
 
-    // Register output signals
+    dAlarmSignal              = registerSignal("dAlarm");
     e2eDelaySignal            = registerSignal("e2eDelay");
     telemetryDelaySignal      = registerSignal("telemetryDelay");
     packetsReceivedSignal     = registerSignal("packetsReceived");
     alarmsReceivedSignal      = registerSignal("alarmsReceived");
     falseAlarmsReceivedSignal = registerSignal("falseAlarmsReceived");
 
-    EV << "[FireServer] initialized. Waiting for packets..." << endl;
+    EV << "[FireServer] init. Waiting for packets on " << gateSize("in") << " gate(s)." << endl;
 }
 
 void FireServer::handleMessage(cMessage *msg)
@@ -37,63 +38,62 @@ void FireServer::handleMessage(cMessage *msg)
     double now = simTime().dbl();
 
     AlarmMsg *alarmMsg = dynamic_cast<AlarmMsg*>(msg);
-    if (alarmMsg != nullptr) {
-        double delay = now - alarmMsg->getTimestamp();
-        emit(e2eDelaySignal, delay);
+    if (alarmMsg) {
+        double e2e    = now - alarmMsg->getTimestamp();
+        double dAlarm = now - alarmMsg->getFireEventTimestamp();
+
+        emit(e2eDelaySignal,  e2e);
+        emit(dAlarmSignal,    dAlarm);
         emit(alarmsReceivedSignal, 1L);
+
         alarmsReceived++;
         packetsReceived++;
-        if (alarmMsg->isFalseAlarm())  {
+
+        if (alarmMsg->isFalseAlarm()) {
             falseAlarmsReceived++;
             emit(falseAlarmsReceivedSignal, 1L);
-            EV << "[FireServer] FALSE ALARM from sensor " << alarmMsg->getSensorId()
-               << " delay=" << delay << "s" << endl;
+            EV << "[FireServer] FALSE ALARM sensor=" << alarmMsg->getSensorId()
+               << " e2e=" << e2e << "s" << endl;
         } else {
-            EV << "[FireServer] ALARM from sensor " << alarmMsg->getSensorId()
+            EV << "[FireServer] ALARM sensor=" << alarmMsg->getSensorId()
                << " zone=" << alarmMsg->getZoneId()
-               << " delay=" << delay << "s" << endl;
+               << " D_alarm=" << dAlarm << "s e2e=" << e2e << "s" << endl;
         }
         delete alarmMsg;
         return;
     }
 
-    // Check if it is a TelemetryMsg
     TelemetryMsg *telem = dynamic_cast<TelemetryMsg*>(msg);
-    if (telem != nullptr) {
-        double delay = now - telem->getTimestamp();
-        emit(telemetryDelaySignal, delay);
+    if (telem) {
+        double e2e = now - telem->getTimestamp();
+        emit(telemetryDelaySignal, e2e);
         emit(packetsReceivedSignal, 1L);
 
         telemetryReceived++;
         packetsReceived++;
 
-        EV << "[FireServer] Telemetry from sensor " << telem->getSensorId()
+        EV << "[FireServer] Telemetry sensor=" << telem->getSensorId()
            << " temp=" << telem->getTemperature()
-           << " delay=" << delay << "s" << endl;
+           << " e2e=" << e2e << "s" << endl;
 
         delete telem;
         return;
     }
 
-    // Unknown packet type
-    EV << "[FireServer] Unknown packet type: " << msg->getName() << endl;
+    EV << "[FireServer] Unknown packet: " << msg->getName() << endl;
     delete msg;
 }
 
 void FireServer::finish()
 {
-    // Record final scalars
-    recordScalar("totalPacketsReceived",    packetsReceived);
-    recordScalar("totalAlarmsReceived",     alarmsReceived);
-    recordScalar("totalFalseAlarms",        falseAlarmsReceived);
-    recordScalar("totalTelemetryReceived",  telemetryReceived);
+    recordScalar("totalPacketsReceived",   packetsReceived);
+    recordScalar("totalAlarmsReceived",    alarmsReceived);
+    recordScalar("totalFalseAlarms",       falseAlarmsReceived);
+    recordScalar("totalTelemetryReceived", telemetryReceived);
 
-    // PDR is computed in post-processing (Python):
-    // PDR = totalPacketsReceived / totalPacketsSent (from SensorApp scalars)
-
-    EV << "[FireServer] Simulation ended." << endl;
-    EV << "  Total packets received : " << packetsReceived    << endl;
-    EV << "  Alarms received        : " << alarmsReceived     << endl;
-    EV << "  False alarms           : " << falseAlarmsReceived << endl;
-    EV << "  Telemetry received     : " << telemetryReceived  << endl;
+    EV << "[FireServer] finish():"
+       << " packets=" << packetsReceived
+       << " alarms="  << alarmsReceived
+       << " false="   << falseAlarmsReceived
+       << " telem="   << telemetryReceived << endl;
 }

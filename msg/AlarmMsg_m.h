@@ -27,12 +27,17 @@ class AlarmMsg;
 namespace forestfiresim {
 
 /**
- * Class generated from <tt>msg/AlarmMsg.msg:4</tt> by opp_msgtool.
+ * Class generated from <tt>msg/AlarmMsg.msg:8</tt> by opp_msgtool.
  * <pre>
+ * // AlarmMsg: alarm packet sent by a sensor when it detects (or falsely detects) a fire.
+ * // fireEventTimestamp is set by SensorApp at the moment the fire notification arrives,
+ * // so that FireServer can compute D_alarm = simTime() - fireEventTimestamp (end-to-end
+ * // alarm delay from fire occurrence to reception at the monitoring server).
  * message AlarmMsg
  * {
  *     int sensorId;
- *     double timestamp;
+ *     double timestamp;           // time the alarm packet was created at the sensor
+ *     double fireEventTimestamp;  // time the fire ignition event occurred (for D_alarm)
  *     double sensorReading;
  *     bool isFire;
  *     bool isFalseAlarm;
@@ -45,6 +50,7 @@ class AlarmMsg : public ::omnetpp::cMessage
   protected:
     int sensorId = 0;
     double timestamp = 0;
+    double fireEventTimestamp = 0;
     double sensorReading = 0;
     bool isFire_ = false;
     bool isFalseAlarm_ = false;
@@ -70,6 +76,9 @@ class AlarmMsg : public ::omnetpp::cMessage
 
     virtual double getTimestamp() const;
     virtual void setTimestamp(double timestamp);
+
+    virtual double getFireEventTimestamp() const;
+    virtual void setFireEventTimestamp(double fireEventTimestamp);
 
     virtual double getSensorReading() const;
     virtual void setSensorReading(double sensorReading);

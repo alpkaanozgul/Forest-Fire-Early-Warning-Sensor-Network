@@ -1,0 +1,13 @@
+# Compiled binaries
+ForestFireSİm
+ForestFireSİm_dbg
+out/
+
+# Simulation results (large files, regenerate with make + run)
+simulations/results/
+
+# OMNeT++ IDE files
+.metadata/
+
+# Claude memory
+.claude/

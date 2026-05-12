@@ -4,38 +4,24 @@
 
 using namespace forestfiresim;
 
-
 Define_Module(SensorApp);
 
 //
-// SensorApp.cc
-// The heart of the simulation. Each sensor node runs this module.
+// SensorApp event flow:
+//   initialize() -> scheduleTelemetry()
+//   telemetryTimer -> sendTelemetry() -> checkFalseAlarm() -> scheduleTelemetry()
+//   "FireInZone" from FireGen -> handleFireNotification() -> Bernoulli trial -> AlarmMsg
 //
-// Event flow:
-//   initialize()
-//     -> scheduleTelemetry()  [schedules first telemetryTimer]
-//
-//   handleMessage(telemetryTimer)
-//     -> sendTelemetry()      [builds TelemetryMsg, sends down to LoRa]
-//     -> checkFalseAlarm()    [Bernoulli trial for false alarm]
-//     -> scheduleTelemetry()  [reschedule next telemetry]
-//
-//   handleMessage("FireInZone" from FireGen)
-//     -> handleFireNotification()
-//        -> Bernoulli(pd) trial
-//        -> if detected: build AlarmMsg, send down to LoRa
-//
-// RNG stream allocation (per node, offset by nodeId to ensure independence):
-//   stream 0 + nodeId*5 + 0 : telemetry inter-arrival times (Exponential)
-//   stream 0 + nodeId*5 + 1 : temperature readings (Normal)
-//   stream 0 + nodeId*5 + 2 : humidity readings (Normal)
-//   stream 0 + nodeId*5 + 3 : smoke level (Uniform / elevated)
-//   stream 0 + nodeId*5 + 4 : Bernoulli trials (detection + false alarm)
+// RNG stream allocation (each node uses its own streams for statistical independence):
+//   nodeId*5+0 : Exponential telemetry intervals
+//   nodeId*5+1 : Normal temperature readings
+//   nodeId*5+2 : Normal humidity readings
+//   nodeId*5+3 : Smoke/wind readings
+//   nodeId*5+4 : Bernoulli detection and false-alarm trials
 //
 
 void SensorApp::initialize()
 {
-    // Read parameters from NED / INI
     nodeId                = par("nodeId");
     zoneId                = par("zoneId");
     meanTelemetryInterval = par("meanTelemetryInterval").doubleValue();
@@ -48,62 +34,42 @@ void SensorApp::initialize()
     tempThreshold         = par("tempThreshold");
     smokeThreshold        = par("smokeThreshold");
 
-    // Counters
-    telemetrySent         = 0;
-    alarmsSent            = 0;
-    trueAlarmsGenerated   = 0;
-    falseAlarmsGenerated  = 0;
+    telemetrySent        = 0;
+    alarmsSent           = 0;
+    trueAlarmsGenerated  = 0;
+    falseAlarmsGenerated = 0;
 
-    // Register output signals for @statistic
-    alarmsSentSignal     = registerSignal("alarmsSent");
-    telemetrySentSignal  = registerSignal("telemetrySent");
+    alarmsSentSignal    = registerSignal("alarmsSent");
+    telemetrySentSignal = registerSignal("telemetrySent");
 
-    // Create self-message token for the telemetry timer
     telemetryTimer = new cMessage("TelemetryTimer");
-
-    // Schedule the first telemetry event
     scheduleTelemetry();
 
-    EV << "[SensorApp " << nodeId << "] initialized in zone " << zoneId << endl;
+    EV << "[SensorApp " << nodeId << "] init zone=" << zoneId << endl;
 }
 
 void SensorApp::handleMessage(cMessage *msg)
 {
     if (msg == telemetryTimer) {
-        // ---- Periodic telemetry cycle ----
         sendTelemetry();
         checkFalseAlarm();
-        scheduleTelemetry();   // schedule next
-
+        scheduleTelemetry();
     } else if (strcmp(msg->getName(), "FireInZone") == 0) {
-        // ---- Fire notification from FireGen ----
         handleFireNotification(msg);
         delete msg;
-
     } else {
-        // ---- Packet coming UP from LoRa layer (e.g. downlink ACK) ----
-        // For this project we don't process downlink; just delete
-        EV << "[SensorApp " << nodeId << "] received unknown message: "
-           << msg->getName() << endl;
+        // Incoming packet from lower layer (e.g. downlink ACK) - not used
         delete msg;
     }
 }
 
-// ---------------------------------------------------------------
-// Schedule next telemetry using Exp(1/meanTelemetryInterval)
-// This implements the inverse transform: t = -mean * ln(U)
-// ---------------------------------------------------------------
+// Exponential inter-arrival: t = -mean * ln(U)   (inverse CDF, from RngUtils)
 void SensorApp::scheduleTelemetry()
 {
-    int rngStream = nodeId * 5 + 0;
-    double interval = RngUtils::exponentialRV(1.0 / meanTelemetryInterval, rngStream);
+    double interval = RngUtils::exponentialRV(1.0 / meanTelemetryInterval, 0);
     scheduleAt(simTime() + interval, telemetryTimer);
 }
 
-// ---------------------------------------------------------------
-// Build a TelemetryMsg with Normal-distributed readings and send
-// it down to the LoRa layer
-// ---------------------------------------------------------------
 void SensorApp::sendTelemetry()
 {
     TelemetryMsg *pkt = new TelemetryMsg("Telemetry");
@@ -111,114 +77,91 @@ void SensorApp::sendTelemetry()
     pkt->setTimestamp(simTime().dbl());
     pkt->setTemperature(readTemperature());
     pkt->setHumidity(readHumidity());
-    pkt->setSmokeLevel(readSmokeLevel(false));  // normal conditions
-    pkt->setWindSpeed(RngUtils::normalRV(3.0, 1.0, nodeId * 5 + 3));
+    pkt->setSmokeLevel(readSmokeLevel(false));
+    pkt->setWindSpeed(RngUtils::normalRV(3.0, 1.0, 3));
     pkt->setNearThreshold(pkt->getTemperature() > tempThreshold * 0.8);
 
-    send(pkt, "lowerLayerOut");
+    send(pkt, "socketOut");   // IApp gate name
 
     telemetrySent++;
     emit(telemetrySentSignal, 1);
-
-    EV << "[SensorApp " << nodeId << "] Telemetry sent at t=" << simTime() << endl;
+    EV << "[SensorApp " << nodeId << "] Telemetry t=" << simTime() << endl;
 }
 
-// ---------------------------------------------------------------
-// Handle fire notification from FireGen.
-// Only react if the fire is in our zone.
-// Bernoulli(pd) trial decides detection.
-// ---------------------------------------------------------------
 void SensorApp::handleFireNotification(cMessage *msg)
 {
-    int fireZone = (int)msg->par("zoneId").longValue();
+    int fireZone          = (int)msg->par("zoneId").longValue();
+    double fireEventTime  = msg->par("timestamp").doubleValue();
 
-    // Only sensors in the affected zone respond
-    if (fireZone != zoneId) {
-        EV << "[SensorApp " << nodeId << "] Fire in zone " << fireZone
-           << ", I am in zone " << zoneId << " -- ignoring." << endl;
-        return;
-    }
+    if (fireZone != zoneId) return;
 
-    EV << "[SensorApp " << nodeId << "] Fire in my zone " << zoneId
+    EV << "[SensorApp " << nodeId << "] Fire in zone " << zoneId
        << " at t=" << simTime() << endl;
 
-    // Bernoulli(pd) detection trial
-    int rngStream = nodeId * 5 + 4;
-    int detected  = RngUtils::bernoulliRV(fireDetectionProb, rngStream);
+    // Bernoulli(pd) detection trial -- inverse transform for discrete distribution
+    int detected = RngUtils::bernoulliRV(fireDetectionProb, 4);
 
     if (detected) {
-        // Build and send alarm packet
         AlarmMsg *alarm = new AlarmMsg("Alarm");
         alarm->setSensorId(nodeId);
         alarm->setTimestamp(simTime().dbl());
-        alarm->setSensorReading(readSmokeLevel(true));  // elevated reading
+        alarm->setFireEventTimestamp(fireEventTime);  // D_alarm origin
+        alarm->setSensorReading(readSmokeLevel(true));
         alarm->setIsFire(true);
         alarm->setIsFalseAlarm(false);
         alarm->setZoneId(zoneId);
+        alarm->setKind(1);   // high-priority kind flag
 
-        // Give alarm higher priority by setting kind=1
-        // (GatewayQueue can use this for priority scheduling)
-        alarm->setKind(1);
-
-        send(alarm, "lowerLayerOut");
+        send(alarm, "socketOut");
 
         alarmsSent++;
         trueAlarmsGenerated++;
         emit(alarmsSentSignal, 1);
-
-        EV << "[SensorApp " << nodeId << "] ALARM sent (true fire detected)" << endl;
+        EV << "[SensorApp " << nodeId << "] ALARM sent (true fire)" << endl;
     } else {
-        EV << "[SensorApp " << nodeId << "] Fire in zone but NOT detected (missed)" << endl;
+        EV << "[SensorApp " << nodeId << "] Fire missed (Bernoulli trial failed)" << endl;
     }
 }
 
-// ---------------------------------------------------------------
-// False alarm check: each telemetry cycle, Bernoulli(pf) trial
-// If triggered, send a false alarm packet
-// ---------------------------------------------------------------
+// False alarm: Bernoulli(pf) each telemetry cycle
 void SensorApp::checkFalseAlarm()
 {
-    int rngStream  = nodeId * 5 + 4;
-    int falseAlarm = RngUtils::bernoulliRV(falseAlarmProb, rngStream);
+    int falseAlarm = RngUtils::bernoulliRV(falseAlarmProb, 4);
 
     if (falseAlarm) {
         AlarmMsg *alarm = new AlarmMsg("FalseAlarm");
         alarm->setSensorId(nodeId);
         alarm->setTimestamp(simTime().dbl());
-        alarm->setSensorReading(readSmokeLevel(false) + 0.3);  // spurious spike
+        alarm->setFireEventTimestamp(simTime().dbl());  // no real fire; use now
+        alarm->setSensorReading(readSmokeLevel(false) + 0.3);
         alarm->setIsFire(false);
         alarm->setIsFalseAlarm(true);
         alarm->setZoneId(zoneId);
         alarm->setKind(1);
 
-        send(alarm, "lowerLayerOut");
+        send(alarm, "socketOut");
 
         alarmsSent++;
         falseAlarmsGenerated++;
         emit(alarmsSentSignal, 1);
-
-        EV << "[SensorApp " << nodeId << "] FALSE ALARM sent at t=" << simTime() << endl;
+        EV << "[SensorApp " << nodeId << "] FALSE ALARM at t=" << simTime() << endl;
     }
 }
 
-// ---------------------------------------------------------------
-// Sensor reading generators using Normal distribution (Box-Muller)
-// ---------------------------------------------------------------
 double SensorApp::readTemperature()
 {
-    return RngUtils::normalRV(baseTempMu, baseTempSigma, nodeId * 5 + 1);
+    return RngUtils::normalRV(baseTempMu, baseTempSigma, 1);
 }
 
 double SensorApp::readHumidity()
 {
-    return RngUtils::normalRV(baseHumMu, baseHumSigma, nodeId * 5 + 2);
+    return RngUtils::normalRV(baseHumMu, baseHumSigma, 2);
 }
 
 double SensorApp::readSmokeLevel(bool fireNearby)
 {
-    // Normal baseline smoke level, clipped to [0,1]
-    double base = RngUtils::normalRV(0.1, 0.05, nodeId * 5 + 3);
-    if (fireNearby) base += 0.6 + RngUtils::uniformRV(0, 0.3, nodeId * 5 + 3);
+    double base = RngUtils::normalRV(0.1, 0.05, 3);
+    if (fireNearby) base += 0.6 + RngUtils::uniformRV(0, 0.3, 3);
     if (base < 0) base = 0;
     if (base > 1) base = 1;
     return base;
@@ -226,7 +169,9 @@ double SensorApp::readSmokeLevel(bool fireNearby)
 
 void SensorApp::finish()
 {
-    // Record final scalars to .sca file for output analysis
+    cancelAndDelete(telemetryTimer);
+    telemetryTimer = nullptr;
+
     recordScalar("telemetrySent",        telemetrySent);
     recordScalar("alarmsSent",           alarmsSent);
     recordScalar("trueAlarmsGenerated",  trueAlarmsGenerated);
