@@ -31,7 +31,6 @@
 
 package forestfiresim;
 
-import inet.networklayer.configurator.ipv4.Ipv4NetworkConfigurator;
 import forestfiresim.sensor.SensorApp;
 import forestfiresim.gateway.GatewayQueue;
 import forestfiresim.server.FireServer;
@@ -83,12 +82,6 @@ network ForestFire
                 numNodes = parent.numNodes;
                 numZones = parent.numZones;
                 @display("p=100,100");
-        }
-
-        // INET IPv4 configurator: assigns addresses to simulation nodes
-        // (used for the gateway-to-server IP backhaul link)
-        configurator: Ipv4NetworkConfigurator {
-            @display("p=100,50");
         }
 
     connections allowunconnected:
