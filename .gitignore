@@ -3,8 +3,10 @@ ForestFireSİm
 ForestFireSİm_dbg
 out/
 
-# Simulation results (large files, regenerate with make + run)
-simulations/results/
+# Simulation result vectors are large binary files — excluded
+simulations/results/*.vec
+simulations/results/*.vci
+# Scalar results (.sca) are tracked — required by submission guidelines (§8)
 
 # OMNeT++ IDE files
 .metadata/

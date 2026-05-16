@@ -7,18 +7,17 @@
 using namespace omnetpp;
 
 //
-// GatewayQueue: single-server FIFO queue with finite buffer capacity K.
-// Models the M/M/1/K queue for analytical comparison.
+// GatewayQueue: single-server priority queue with finite buffer capacity K.
+// Alarm packets (kind=1) are served before telemetry packets (kind=0).
+// Models a two-class priority M/M/1/K queue.
 //
-// State variables:
-//   buffer       - FIFO queue of waiting packets
-//   serverBusy   - true when the server is processing a packet
-//   pktInService - pointer to the packet currently being served
-//   dropCount    - total packets dropped due to full buffer
+// Priority:
+//   alarmBuffer     - high priority (AlarmMsg, kind=1): fire alarms and false alarms
+//   telemetryBuffer - low priority (TelemetryMsg, kind=0): routine sensor readings
 //
 // Events:
-//   Arrival  -> if idle: start service; if busy & space: enqueue; else: drop
-//   ServiceEnd -> forward packet out, start next if queue not empty
+//   Arrival    -> if idle: start service; if busy & space: enqueue by priority; else: drop
+//   ServiceEnd -> forward packet, dequeue alarm first, then telemetry
 //
 class GatewayQueue : public cSimpleModule
 {
@@ -26,9 +25,10 @@ private:
     int    capacity;
     double meanServiceTime;
 
-    std::queue<cMessage*> buffer;
+    std::queue<cMessage*> alarmBuffer;      // high-priority: alarms (kind=1)
+    std::queue<cMessage*> telemetryBuffer;  // low-priority:  telemetry (kind=0)
     bool      serverBusy;
-    cMessage *pktInService;   // packet currently being served (safe pointer storage)
+    cMessage *pktInService;
     int       dropCount;
     int       totalArrivals;
     int       totalServed;

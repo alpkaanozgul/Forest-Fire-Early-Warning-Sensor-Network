@@ -13,6 +13,7 @@ simple FireGen
         double influenceRadius = default(200); // metres: sensors within this radius are affected
         int    numNodes = default(40);         // must match network numNodes
         int    numZones = default(4);          // how many forest zones
+        int    numZonesToAffect = default(2);  // how many zones each fire spreads to (1..numZones)
 
         @display("i=block/source;p=50,50");
 }

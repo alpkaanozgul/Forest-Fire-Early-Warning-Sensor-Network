@@ -1,0 +1,552 @@
+version 3
+run HighFireRate-74-20260516-13:48:22-21165
+attr configname HighFireRate
+attr datetime 20260516-13:48:22
+attr datetimef 20260516-134822
+attr experiment HighFireRate
+attr inifile simulations/omnetpp.ini
+attr iterationvars $FR=0.01
+attr iterationvarsd FR=0.01
+attr iterationvarsf FR=0.01-
+attr measurement $FR=0.01
+attr network forestfiresim.ForestFire
+attr processid 21165
+attr repetition 14
+attr replication #14
+attr resultdir results
+attr runnumber 74
+attr seedset 14
+itervar FR 0.01
+config description "Sweep λ_fire ∈ {0.001,0.005,0.01,0.02}, N=1, G=1"
+config **.numNodes 8
+config **.numGateways 2
+config **.fireGen.fireRate 0.01
+config network forestfiresim.ForestFire
+config ned-path ../src
+config sim-time-limit 3600s
+config warmup-period 300s
+config repeat 30
+config seed-set 14
+config result-dir results
+config num-rngs 5
+config **.scalar-recording true
+config **.vector-recording true
+config rng-class cMersenneTwister
+config **.fireGen.fireRate 0.005
+config **.fireGen.influenceRadius 200
+config **.fireGen.numZones 2
+config **.fireGen.numZonesToAffect 1
+config **.node[*].nodeId index
+config **.node[*].zoneId "int(index / 4)"
+config **.node[*].meanTelemetryInterval 30s
+config **.node[*].fireDetectionProb 0.90
+config **.node[*].falseAlarmProb 0.01
+config **.node[*].baseTempMu 25.0
+config **.node[*].baseTempSigma 3.0
+config **.node[*].baseHumMu 60.0
+config **.node[*].baseHumSigma 5.0
+config **.node[*].tempThreshold 60.0
+config **.node[*].smokeThreshold 0.7
+config **.gatewayQueue[*].capacity 10
+config **.gatewayQueue[*].meanServiceTime 5s
+config **.loRaGW[*].**.initFromDisplayString false
+config **.LoRaGWNic.radio.iAmGateway true
+config **.LoRaMedium.pathLossType "\"LoRaLogNormalShadowing\""
+config **.sigma 3.57
+config **.minInterferenceTime 0s
+config **.maxTransmissionDuration 4s
+
+par ForestFire.gatewayQueue[0].out.channel typename "\"ned.DatarateChannel\""
+par ForestFire.gatewayQueue[0].out.channel disabled false
+attr mutable ""
+par ForestFire.gatewayQueue[0].out.channel delay 0.005s
+attr mutable ""
+attr unit s
+par ForestFire.gatewayQueue[0].out.channel datarate 1e+08bps
+attr mutable ""
+attr unit bps
+par ForestFire.gatewayQueue[0].out.channel ber 0
+attr mutable ""
+par ForestFire.gatewayQueue[0].out.channel per 0
+attr mutable ""
+par ForestFire.gatewayQueue[1].out.channel typename "\"ned.DatarateChannel\""
+par ForestFire.gatewayQueue[1].out.channel disabled false
+attr mutable ""
+par ForestFire.gatewayQueue[1].out.channel delay 0.005s
+attr mutable ""
+attr unit s
+par ForestFire.gatewayQueue[1].out.channel datarate 1e+08bps
+attr mutable ""
+attr unit bps
+par ForestFire.gatewayQueue[1].out.channel ber 0
+attr mutable ""
+par ForestFire.gatewayQueue[1].out.channel per 0
+attr mutable ""
+par ForestFire.node[0] typename "\"forestfiresim.sensor.SensorApp\""
+par ForestFire.node[0] nodeId 0
+par ForestFire.node[0] zoneId 0
+par ForestFire.node[0] meanTelemetryInterval 30s
+attr unit s
+par ForestFire.node[0] fireDetectionProb 0.9
+par ForestFire.node[0] falseAlarmProb 0.01
+par ForestFire.node[0] baseTempMu 25
+par ForestFire.node[0] baseTempSigma 3
+par ForestFire.node[0] baseHumMu 60
+par ForestFire.node[0] baseHumSigma 5
+par ForestFire.node[0] tempThreshold 60
+par ForestFire.node[0] smokeThreshold 0.7
+scalar ForestFire.node[0] telemetrySent 124
+scalar ForestFire.node[0] alarmsSent 20
+scalar ForestFire.node[0] trueAlarmsGenerated 20
+scalar ForestFire.node[0] falseAlarmsGenerated 0
+scalar ForestFire.node[0] telemetrySent:sum 118
+attr checkSignals false
+attr recordingmode sum
+attr source telemetrySent
+attr title "telemetry sent, sum"
+scalar ForestFire.node[0] alarmsSent:sum 20
+attr checkSignals false
+attr recordingmode sum
+attr source alarmsSent
+attr title "alarms sent, sum"
+par ForestFire.node[1] typename "\"forestfiresim.sensor.SensorApp\""
+par ForestFire.node[1] nodeId 1
+par ForestFire.node[1] zoneId 0
+par ForestFire.node[1] meanTelemetryInterval 30s
+attr unit s
+par ForestFire.node[1] fireDetectionProb 0.9
+par ForestFire.node[1] falseAlarmProb 0.01
+par ForestFire.node[1] baseTempMu 25
+par ForestFire.node[1] baseTempSigma 3
+par ForestFire.node[1] baseHumMu 60
+par ForestFire.node[1] baseHumSigma 5
+par ForestFire.node[1] tempThreshold 60
+par ForestFire.node[1] smokeThreshold 0.7
+scalar ForestFire.node[1] telemetrySent 124
+scalar ForestFire.node[1] alarmsSent 19
+scalar ForestFire.node[1] trueAlarmsGenerated 19
+scalar ForestFire.node[1] falseAlarmsGenerated 0
+scalar ForestFire.node[1] telemetrySent:sum 112
+attr checkSignals false
+attr recordingmode sum
+attr source telemetrySent
+attr title "telemetry sent, sum"
+scalar ForestFire.node[1] alarmsSent:sum 19
+attr checkSignals false
+attr recordingmode sum
+attr source alarmsSent
+attr title "alarms sent, sum"
+par ForestFire.node[2] typename "\"forestfiresim.sensor.SensorApp\""
+par ForestFire.node[2] nodeId 2
+par ForestFire.node[2] zoneId 0
+par ForestFire.node[2] meanTelemetryInterval 30s
+attr unit s
+par ForestFire.node[2] fireDetectionProb 0.9
+par ForestFire.node[2] falseAlarmProb 0.01
+par ForestFire.node[2] baseTempMu 25
+par ForestFire.node[2] baseTempSigma 3
+par ForestFire.node[2] baseHumMu 60
+par ForestFire.node[2] baseHumSigma 5
+par ForestFire.node[2] tempThreshold 60
+par ForestFire.node[2] smokeThreshold 0.7
+scalar ForestFire.node[2] telemetrySent 116
+scalar ForestFire.node[2] alarmsSent 21
+scalar ForestFire.node[2] trueAlarmsGenerated 20
+scalar ForestFire.node[2] falseAlarmsGenerated 1
+scalar ForestFire.node[2] telemetrySent:sum 105
+attr checkSignals false
+attr recordingmode sum
+attr source telemetrySent
+attr title "telemetry sent, sum"
+scalar ForestFire.node[2] alarmsSent:sum 20
+attr checkSignals false
+attr recordingmode sum
+attr source alarmsSent
+attr title "alarms sent, sum"
+par ForestFire.node[3] typename "\"forestfiresim.sensor.SensorApp\""
+par ForestFire.node[3] nodeId 3
+par ForestFire.node[3] zoneId 0
+par ForestFire.node[3] meanTelemetryInterval 30s
+attr unit s
+par ForestFire.node[3] fireDetectionProb 0.9
+par ForestFire.node[3] falseAlarmProb 0.01
+par ForestFire.node[3] baseTempMu 25
+par ForestFire.node[3] baseTempSigma 3
+par ForestFire.node[3] baseHumMu 60
+par ForestFire.node[3] baseHumSigma 5
+par ForestFire.node[3] tempThreshold 60
+par ForestFire.node[3] smokeThreshold 0.7
+scalar ForestFire.node[3] telemetrySent 91
+scalar ForestFire.node[3] alarmsSent 19
+scalar ForestFire.node[3] trueAlarmsGenerated 19
+scalar ForestFire.node[3] falseAlarmsGenerated 0
+scalar ForestFire.node[3] telemetrySent:sum 85
+attr checkSignals false
+attr recordingmode sum
+attr source telemetrySent
+attr title "telemetry sent, sum"
+scalar ForestFire.node[3] alarmsSent:sum 19
+attr checkSignals false
+attr recordingmode sum
+attr source alarmsSent
+attr title "alarms sent, sum"
+par ForestFire.node[4] typename "\"forestfiresim.sensor.SensorApp\""
+par ForestFire.node[4] nodeId 4
+par ForestFire.node[4] zoneId 1
+par ForestFire.node[4] meanTelemetryInterval 30s
+attr unit s
+par ForestFire.node[4] fireDetectionProb 0.9
+par ForestFire.node[4] falseAlarmProb 0.01
+par ForestFire.node[4] baseTempMu 25
+par ForestFire.node[4] baseTempSigma 3
+par ForestFire.node[4] baseHumMu 60
+par ForestFire.node[4] baseHumSigma 5
+par ForestFire.node[4] tempThreshold 60
+par ForestFire.node[4] smokeThreshold 0.7
+scalar ForestFire.node[4] telemetrySent 119
+scalar ForestFire.node[4] alarmsSent 20
+scalar ForestFire.node[4] trueAlarmsGenerated 19
+scalar ForestFire.node[4] falseAlarmsGenerated 1
+scalar ForestFire.node[4] telemetrySent:sum 103
+attr checkSignals false
+attr recordingmode sum
+attr source telemetrySent
+attr title "telemetry sent, sum"
+scalar ForestFire.node[4] alarmsSent:sum 17
+attr checkSignals false
+attr recordingmode sum
+attr source alarmsSent
+attr title "alarms sent, sum"
+par ForestFire.node[5] typename "\"forestfiresim.sensor.SensorApp\""
+par ForestFire.node[5] nodeId 5
+par ForestFire.node[5] zoneId 1
+par ForestFire.node[5] meanTelemetryInterval 30s
+attr unit s
+par ForestFire.node[5] fireDetectionProb 0.9
+par ForestFire.node[5] falseAlarmProb 0.01
+par ForestFire.node[5] baseTempMu 25
+par ForestFire.node[5] baseTempSigma 3
+par ForestFire.node[5] baseHumMu 60
+par ForestFire.node[5] baseHumSigma 5
+par ForestFire.node[5] tempThreshold 60
+par ForestFire.node[5] smokeThreshold 0.7
+scalar ForestFire.node[5] telemetrySent 100
+scalar ForestFire.node[5] alarmsSent 22
+scalar ForestFire.node[5] trueAlarmsGenerated 22
+scalar ForestFire.node[5] falseAlarmsGenerated 0
+scalar ForestFire.node[5] telemetrySent:sum 91
+attr checkSignals false
+attr recordingmode sum
+attr source telemetrySent
+attr title "telemetry sent, sum"
+scalar ForestFire.node[5] alarmsSent:sum 20
+attr checkSignals false
+attr recordingmode sum
+attr source alarmsSent
+attr title "alarms sent, sum"
+par ForestFire.node[6] typename "\"forestfiresim.sensor.SensorApp\""
+par ForestFire.node[6] nodeId 6
+par ForestFire.node[6] zoneId 1
+par ForestFire.node[6] meanTelemetryInterval 30s
+attr unit s
+par ForestFire.node[6] fireDetectionProb 0.9
+par ForestFire.node[6] falseAlarmProb 0.01
+par ForestFire.node[6] baseTempMu 25
+par ForestFire.node[6] baseTempSigma 3
+par ForestFire.node[6] baseHumMu 60
+par ForestFire.node[6] baseHumSigma 5
+par ForestFire.node[6] tempThreshold 60
+par ForestFire.node[6] smokeThreshold 0.7
+scalar ForestFire.node[6] telemetrySent 124
+scalar ForestFire.node[6] alarmsSent 22
+scalar ForestFire.node[6] trueAlarmsGenerated 21
+scalar ForestFire.node[6] falseAlarmsGenerated 1
+scalar ForestFire.node[6] telemetrySent:sum 114
+attr checkSignals false
+attr recordingmode sum
+attr source telemetrySent
+attr title "telemetry sent, sum"
+scalar ForestFire.node[6] alarmsSent:sum 20
+attr checkSignals false
+attr recordingmode sum
+attr source alarmsSent
+attr title "alarms sent, sum"
+par ForestFire.node[7] typename "\"forestfiresim.sensor.SensorApp\""
+par ForestFire.node[7] nodeId 7
+par ForestFire.node[7] zoneId 1
+par ForestFire.node[7] meanTelemetryInterval 30s
+attr unit s
+par ForestFire.node[7] fireDetectionProb 0.9
+par ForestFire.node[7] falseAlarmProb 0.01
+par ForestFire.node[7] baseTempMu 25
+par ForestFire.node[7] baseTempSigma 3
+par ForestFire.node[7] baseHumMu 60
+par ForestFire.node[7] baseHumSigma 5
+par ForestFire.node[7] tempThreshold 60
+par ForestFire.node[7] smokeThreshold 0.7
+scalar ForestFire.node[7] telemetrySent 113
+scalar ForestFire.node[7] alarmsSent 20
+scalar ForestFire.node[7] trueAlarmsGenerated 19
+scalar ForestFire.node[7] falseAlarmsGenerated 1
+scalar ForestFire.node[7] telemetrySent:sum 109
+attr checkSignals false
+attr recordingmode sum
+attr source telemetrySent
+attr title "telemetry sent, sum"
+scalar ForestFire.node[7] alarmsSent:sum 18
+attr checkSignals false
+attr recordingmode sum
+attr source alarmsSent
+attr title "alarms sent, sum"
+par ForestFire.gatewayQueue[0] typename "\"forestfiresim.gateway.GatewayQueue\""
+par ForestFire.gatewayQueue[0] capacity 10
+par ForestFire.gatewayQueue[0] meanServiceTime 5s
+attr unit s
+scalar ForestFire.gatewayQueue[0] totalArrivals 534
+scalar ForestFire.gatewayQueue[0] totalServed 503
+scalar ForestFire.gatewayQueue[0] totalDrops 22
+scalar ForestFire.gatewayQueue[0] finalQueueLength 8
+scalar ForestFire.gatewayQueue[0] dropRate 0.041198501872659
+scalar ForestFire.gatewayQueue[0] serviceTime:mean 5.0448275976381
+attr checkSignals false
+attr recordingmode mean
+attr source serviceTime
+attr title "service time, mean"
+attr unit s
+scalar ForestFire.gatewayQueue[0] dropCount:sum 22
+attr checkSignals false
+attr recordingmode sum
+attr source dropCount
+attr title "dropped packets, sum"
+scalar ForestFire.gatewayQueue[0] utilisation:mean 0.79727427597956
+attr checkSignals false
+attr recordingmode mean
+attr source utilisation
+attr title "server utilisation, mean"
+scalar ForestFire.gatewayQueue[0] utilisation:timeavg 0.7172702638862
+attr checkSignals false
+attr recordingmode timeavg
+attr source utilisation
+attr title "server utilisation, timeavg"
+scalar ForestFire.gatewayQueue[0] waitingTime:mean 17.653883545454
+attr checkSignals false
+attr recordingmode mean
+attr source waitingTime
+attr title "waiting time, mean"
+attr unit s
+scalar ForestFire.gatewayQueue[0] waitingTime:max 89.128257682523
+attr checkSignals false
+attr recordingmode max
+attr source waitingTime
+attr title "waiting time, max"
+attr unit s
+scalar ForestFire.gatewayQueue[0] queueLength:mean 3.3754556500608
+attr checkSignals false
+attr recordingmode mean
+attr source queueLength
+attr title "queue length, mean"
+scalar ForestFire.gatewayQueue[0] queueLength:max 10
+attr checkSignals false
+attr recordingmode max
+attr source queueLength
+attr title "queue length, max"
+scalar ForestFire.gatewayQueue[0] queueLength:timeavg 2.5408507463915
+attr checkSignals false
+attr recordingmode timeavg
+attr source queueLength
+attr title "queue length, timeavg"
+par ForestFire.gatewayQueue[1] typename "\"forestfiresim.gateway.GatewayQueue\""
+par ForestFire.gatewayQueue[1] capacity 10
+par ForestFire.gatewayQueue[1] meanServiceTime 5s
+attr unit s
+scalar ForestFire.gatewayQueue[1] totalArrivals 540
+scalar ForestFire.gatewayQueue[1] totalServed 526
+scalar ForestFire.gatewayQueue[1] totalDrops 11
+scalar ForestFire.gatewayQueue[1] finalQueueLength 2
+scalar ForestFire.gatewayQueue[1] dropRate 0.02037037037037
+scalar ForestFire.gatewayQueue[1] serviceTime:mean 4.9653721391436
+attr checkSignals false
+attr recordingmode mean
+attr source serviceTime
+attr title "service time, mean"
+attr unit s
+scalar ForestFire.gatewayQueue[1] dropCount:sum 11
+attr checkSignals false
+attr recordingmode sum
+attr source dropCount
+attr title "dropped packets, sum"
+scalar ForestFire.gatewayQueue[1] utilisation:mean 0.81281618887015
+attr checkSignals false
+attr recordingmode mean
+attr source utilisation
+attr title "server utilisation, mean"
+scalar ForestFire.gatewayQueue[1] utilisation:timeavg 0.72455062671198
+attr checkSignals false
+attr recordingmode timeavg
+attr source utilisation
+attr title "server utilisation, timeavg"
+scalar ForestFire.gatewayQueue[1] waitingTime:mean 17.290682914108
+attr checkSignals false
+attr recordingmode mean
+attr source waitingTime
+attr title "waiting time, mean"
+attr unit s
+scalar ForestFire.gatewayQueue[1] waitingTime:max 114.18622058116
+attr checkSignals false
+attr recordingmode max
+attr source waitingTime
+attr title "waiting time, max"
+attr unit s
+scalar ForestFire.gatewayQueue[1] queueLength:mean 3.093896713615
+attr checkSignals false
+attr recordingmode mean
+attr source queueLength
+attr title "queue length, mean"
+scalar ForestFire.gatewayQueue[1] queueLength:max 10
+attr checkSignals false
+attr recordingmode max
+attr source queueLength
+attr title "queue length, max"
+scalar ForestFire.gatewayQueue[1] queueLength:timeavg 2.511473734888
+attr checkSignals false
+attr recordingmode timeavg
+attr source queueLength
+attr title "queue length, timeavg"
+par ForestFire.server typename "\"forestfiresim.server.FireServer\""
+par ForestFire.server numNodes 8
+scalar ForestFire.server totalPacketsReceived 1029
+scalar ForestFire.server totalAlarmsReceived 156
+scalar ForestFire.server totalFalseAlarms 4
+scalar ForestFire.server totalTelemetryReceived 873
+scalar ForestFire.server falseAlarmsReceived:sum 2
+attr checkSignals false
+attr recordingmode sum
+attr source falseAlarmsReceived
+attr title "false alarms received, sum"
+scalar ForestFire.server alarmsReceived:sum 146
+attr checkSignals false
+attr recordingmode sum
+attr source alarmsReceived
+attr title "alarms received, sum"
+scalar ForestFire.server packetsReceived:sum 803
+attr checkSignals false
+attr recordingmode sum
+attr source packetsReceived
+attr title "packets received, sum"
+scalar ForestFire.server telemetryDelay:mean 22.898385400509
+attr checkSignals false
+attr recordingmode mean
+attr source telemetryDelay
+attr title "telemetry E2E delay, mean"
+attr unit s
+scalar ForestFire.server e2eDelay:mean 20.29051158686
+attr checkSignals false
+attr recordingmode mean
+attr source e2eDelay
+attr title "E2E packet delay, mean"
+attr unit s
+scalar ForestFire.server e2eDelay:max 85.649401313958
+attr checkSignals false
+attr recordingmode max
+attr source e2eDelay
+attr title "E2E packet delay, max"
+attr unit s
+scalar ForestFire.server dAlarm:mean 20.29051158686
+attr checkSignals false
+attr recordingmode mean
+attr source dAlarm
+attr title "D_alarm end-to-end alarm delay, mean"
+attr unit s
+scalar ForestFire.server dAlarm:max 85.649401313958
+attr checkSignals false
+attr recordingmode max
+attr source dAlarm
+attr title "D_alarm end-to-end alarm delay, max"
+attr unit s
+scalar ForestFire.server dAlarm:min 0.23080116022379
+attr checkSignals false
+attr recordingmode min
+attr source dAlarm
+attr title "D_alarm end-to-end alarm delay, min"
+attr unit s
+statistic ForestFire.server dAlarm:histogram
+field count 146
+field mean 20.29051158686
+field stddev 16.650423329936
+field min 0.23080116022379
+field max 85.649401313958
+field sum 2962.4146916815
+field sqrsum 100308.21620123
+attr checkSignals false
+attr recordingmode histogram
+attr source dAlarm
+attr title "D_alarm end-to-end alarm delay"
+attr unit s
+bin	-inf	0
+bin	0	5
+bin	2	7
+bin	4	15
+bin	6	8
+bin	8	14
+bin	10	7
+bin	12	8
+bin	14	11
+bin	16	8
+bin	18	5
+bin	20	8
+bin	22	5
+bin	24	7
+bin	26	2
+bin	28	3
+bin	30	2
+bin	32	6
+bin	34	5
+bin	36	2
+bin	38	3
+bin	40	0
+bin	42	2
+bin	44	1
+bin	46	0
+bin	48	2
+bin	50	1
+bin	52	1
+bin	54	1
+bin	56	2
+bin	58	0
+bin	60	0
+bin	62	0
+bin	64	0
+bin	66	0
+bin	68	2
+bin	70	0
+bin	72	2
+bin	74	0
+bin	76	0
+bin	78	0
+bin	80	0
+bin	82	0
+bin	84	1
+bin	86	0
+bin	88	0
+bin	90	0
+bin	92	0
+bin	94	0
+bin	96	0
+bin	98	0
+bin	100	0
+bin	102	0
+bin	104	0
+bin	106	0
+bin	108	0
+par ForestFire.fireGen typename "\"forestfiresim.fire.FireGen\""
+par ForestFire.fireGen fireRate 0.01
+par ForestFire.fireGen influenceRadius 200
+par ForestFire.fireGen numNodes 8
+par ForestFire.fireGen numZones 2
+par ForestFire.fireGen numZonesToAffect 1
+scalar ForestFire.fireGen totalFireEvents 44
+par ForestFire typename "\"forestfiresim.ForestFire\""
+par ForestFire numNodes 8
+par ForestFire numGateways 2
+par ForestFire numZones 2
+

@@ -19,6 +19,7 @@ private:
     double influenceRadius;
     int    numNodes;
     int    numZones;
+    int    numZonesToAffect;  // how many zones each fire event spreads to
 
     // internal self-message used to schedule next fire event
     cMessage *fireEvent;

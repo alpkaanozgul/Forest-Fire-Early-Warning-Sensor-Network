@@ -25,17 +25,21 @@ Define_Module(FireGen);
 
 void FireGen::initialize()
 {
-    fireRate        = par("fireRate");
-    influenceRadius = par("influenceRadius");
-    numNodes        = par("numNodes");
-    numZones        = par("numZones");
-    totalFireEvents = 0;
+    fireRate          = par("fireRate");
+    influenceRadius   = par("influenceRadius");
+    numNodes          = par("numNodes");
+    numZones          = par("numZones");
+    numZonesToAffect  = par("numZonesToAffect");
+    if (numZonesToAffect < 1) numZonesToAffect = 1;
+    if (numZonesToAffect > numZones) numZonesToAffect = numZones;
+    totalFireEvents   = 0;
 
     fireEvent = new cMessage("FireIgnitionEvent");
     scheduleNextFire();
 
     EV << "[FireGen] init. λ_fire=" << fireRate
        << "/s  numZones=" << numZones
+       << "  numZonesToAffect=" << numZonesToAffect
        << "  numNodes=" << numNodes << endl;
 }
 
@@ -45,15 +49,21 @@ void FireGen::handleMessage(cMessage *msg)
 
     totalFireEvents++;
 
-    // Uniform zone selection: Discrete Uniform {0 .. numZones-1}
-    // (Uses inverse transform for discrete distributions via discreteUniformRV)
-    int zoneId = RngUtils::discreteUniformRV(numZones, 0) - 1;
+    // Pick a random starting zone, then take numZonesToAffect consecutive zones
+    // (wrapping around). This guarantees the fire always spreads to exactly
+    // numZonesToAffect zones, producing burst arrivals at the gateway.
+    int startZone = RngUtils::discreteUniformRV(numZones, 0) - 1;
 
     EV << "[FireGen] Ignition #" << totalFireEvents
-       << "  zone=" << zoneId
+       << "  startZone=" << startZone
+       << "  spread=" << numZonesToAffect
        << "  t=" << simTime() << endl;
 
-    notifyNearbySensors(zoneId);
+    for (int k = 0; k < numZonesToAffect; k++) {
+        int zoneId = (startZone + k) % numZones;
+        notifyNearbySensors(zoneId);
+    }
+
     scheduleNextFire();
 }
 
@@ -66,18 +76,21 @@ void FireGen::scheduleNextFire()
 
 void FireGen::notifyNearbySensors(int zoneId)
 {
-    // Sensor modules are named "node[0]", "node[1]", ... in ForestFire.ned.
-    // Each node is a SensorApp simple module with a @directIn "directIn" gate.
+    // Only notify nodes that belong to the affected zone.
+    // Zone z contains nodes [z*nodesPerZone .. (z+1)*nodesPerZone - 1].
     cModule *network = getParentModule();
+    int nodesPerZone = numNodes / numZones;
+    int first = zoneId * nodesPerZone;
+    int last  = first + nodesPerZone;   // exclusive
 
-    for (int i = 0; i < numNodes; i++) {
+    for (int i = first; i < last; i++) {
         std::string path = std::string("node[") + std::to_string(i) + "]";
         cModule *sensorMod = network->getModuleByPath(path.c_str());
 
         if (sensorMod) {
             cMessage *notify = new cMessage("FireInZone");
             notify->addPar("zoneId")    = zoneId;
-            notify->addPar("timestamp") = simTime().dbl();  // for D_alarm
+            notify->addPar("timestamp") = simTime().dbl();
             sendDirect(notify, sensorMod, "directIn");
         }
     }

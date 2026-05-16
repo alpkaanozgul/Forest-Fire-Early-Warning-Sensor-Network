@@ -2,7 +2,7 @@
 # OMNeT++/OMNEST Makefile for ForestFireSİm
 #
 # This file was generated with the command:
-#  opp_makemake -f --deep -O out -I.
+#  opp_makemake -f --deep -O out -KFLORA_PROJ=../flora -KINET4_4_PROJ=../inet4.4 -DINET_IMPORT -I. -I$$\(FLORA_PROJ\)/src -I$$\(INET4_4_PROJ\)/src -L$$\(FLORA_PROJ\)/src -L$$\(INET4_4_PROJ\)/src -lflora$$\(D\) -lINET$$\(D\)
 #
 
 # Name of target to be created (-o option)
@@ -17,13 +17,13 @@ USERIF_LIBS = $(ALL_ENV_LIBS) # that is, $(QTENV_LIBS) $(CMDENV_LIBS)
 #USERIF_LIBS = $(QTENV_LIBS)
 
 # C++ include paths (with -I)
-INCLUDE_PATH = -I.
+INCLUDE_PATH = -I. -I$(FLORA_PROJ)/src -I$(INET4_4_PROJ)/src
 
 # Additional object and library files to link with
 EXTRA_OBJS =
 
 # Additional libraries (-L, -l options)
-LIBS =
+LIBS = $(LDFLAG_LIBPATH)$(FLORA_PROJ)/src $(LDFLAG_LIBPATH)$(INET4_4_PROJ)/src  -lflora$(D) -lINET$(D)
 
 # Output directory
 PROJECT_OUTPUT_DIR = out
@@ -48,6 +48,10 @@ MSGFILES = \
 # SM files
 SMFILES =
 
+# Other makefile variables (-K)
+FLORA_PROJ=../flora
+INET4_4_PROJ=../inet4.4
+
 #------------------------------------------------------------------------------
 
 # Pull in OMNeT++ configuration (Makefile.inc)
@@ -66,8 +70,11 @@ include $(CONFIGFILE)
 
 # Simulation kernel and user interface libraries
 OMNETPP_LIBS = $(OPPMAIN_LIB) $(USERIF_LIBS) $(KERNEL_LIBS) $(SYS_LIBS)
+ifneq ($(PLATFORM),win32)
+LIBS += -Wl,-rpath,$(abspath $(FLORA_PROJ)/src) -Wl,-rpath,$(abspath $(INET4_4_PROJ)/src)
+endif
 
-COPTS = $(CFLAGS) $(IMPORT_DEFINES)  $(INCLUDE_PATH) -I$(OMNETPP_INCL_DIR)
+COPTS = $(CFLAGS) $(IMPORT_DEFINES) -DINET_IMPORT $(INCLUDE_PATH) -I$(OMNETPP_INCL_DIR)
 MSGCOPTS = $(INCLUDE_PATH)
 SMCOPTS =
 

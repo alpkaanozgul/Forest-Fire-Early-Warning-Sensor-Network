@@ -39,9 +39,9 @@ import forestfiresim.fire.FireGen;
 network ForestFire
 {
     parameters:
-        int numNodes    = default(40);   // N: number of sensor nodes
-        int numGateways = default(2);    // G: number of gateways (queues)
-        int numZones    = default(4);    // forest zones for fire assignment
+        int numNodes    = default(8);    // N: number of sensor nodes (4 per zone)
+        int numGateways = default(2);    // G: number of gateways (1 per zone)
+        int numZones    = default(2);    // forest zones (Zone A and Zone B)
 
         @display("bgb=1200,900");
 
@@ -54,7 +54,7 @@ network ForestFire
         node[numNodes]: SensorApp {
             parameters:
                 nodeId = index;
-                zoneId = index % parent.numZones;
+                zoneId = int(index / (parent.numNodes / parent.numGateways));
                 @display("p=150,700,row,55");
         }
 
@@ -86,10 +86,10 @@ network ForestFire
 
     connections allowunconnected:
 
-        // Sensor --> Gateway queue: simulates LoRa uplink + gateway reception
-        // Round-robin: sensor i --> queue (i % numGateways)
+        // Sensor --> Gateway queue: zone-based assignment
+        // Nodes 0..(N/G-1) --> gateway[0] (Zone A), nodes N/G..(N-1) --> gateway[1] (Zone B)
         for i=0..numNodes-1 {
-            node[i].socketOut --> gatewayQueue[i % numGateways].in++;
+            node[i].socketOut --> gatewayQueue[int(i / (numNodes / numGateways))].in++;
         }
 
         // Gateway queue --> Server: 100 Mbps INET link with 5 ms propagation delay

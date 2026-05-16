@@ -45,19 +45,25 @@ void GatewayQueue::handleMessage(cMessage *msg)
     if (msg == serviceEndEvent) {
         endService();
     } else {
-        // Packet arrival
         totalArrivals++;
-        // tag arrival time for waiting-time computation
         msg->addPar("arrivalTime") = simTime().dbl();
+
+        bool isAlarm = (msg->getKind() == 1);
+        int totalQueued = (int)(alarmBuffer.size() + telemetryBuffer.size());
 
         if (!serverBusy) {
             startService(msg);
-        } else if ((int)buffer.size() < capacity) {
-            buffer.push(msg);
-            emit(queueLengthSignal, (long)buffer.size());
-            EV << "[GatewayQueue] Queued. depth=" << buffer.size() << endl;
+        } else if (totalQueued < capacity) {
+            if (isAlarm)
+                alarmBuffer.push(msg);
+            else
+                telemetryBuffer.push(msg);
+            long depth = (long)(alarmBuffer.size() + telemetryBuffer.size());
+            emit(queueLengthSignal, depth);
+            EV << "[GatewayQueue] Queued (" << (isAlarm ? "ALARM" : "telemetry")
+               << "). alarms=" << alarmBuffer.size()
+               << " telemetry=" << telemetryBuffer.size() << endl;
         } else {
-            // Buffer full: M/M/1/K drop
             dropCount++;
             emit(dropCountSignal, 1L);
             EV << "[GatewayQueue] DROP (buffer full, K=" << capacity
@@ -88,7 +94,7 @@ void GatewayQueue::startService(cMessage *pkt)
        << "s waitTime=" << waitTime << "s" << endl;
 }
 
-// End service: forward packet, start next or go idle.
+// End service: forward packet, dequeue alarm first (priority), then telemetry.
 void GatewayQueue::endService()
 {
     ASSERT(pktInService != nullptr);
@@ -100,10 +106,18 @@ void GatewayQueue::endService()
 
     EV << "[GatewayQueue] Service done. Forwarding to server." << endl;
 
-    if (!buffer.empty()) {
-        cMessage *next = buffer.front();
-        buffer.pop();
-        emit(queueLengthSignal, (long)buffer.size());
+    cMessage *next = nullptr;
+    if (!alarmBuffer.empty()) {
+        next = alarmBuffer.front();
+        alarmBuffer.pop();
+        EV << "[GatewayQueue] Dequeuing ALARM (priority)." << endl;
+    } else if (!telemetryBuffer.empty()) {
+        next = telemetryBuffer.front();
+        telemetryBuffer.pop();
+    }
+
+    if (next) {
+        emit(queueLengthSignal, (long)(alarmBuffer.size() + telemetryBuffer.size()));
         startService(next);
     } else {
         serverBusy = false;
@@ -117,7 +131,7 @@ void GatewayQueue::finish()
     recordScalar("totalArrivals",     totalArrivals);
     recordScalar("totalServed",       totalServed);
     recordScalar("totalDrops",        dropCount);
-    recordScalar("finalQueueLength",  (long)buffer.size());
+    recordScalar("finalQueueLength",  (long)(alarmBuffer.size() + telemetryBuffer.size()));
 
     double dropRate = (totalArrivals > 0) ? (double)dropCount / totalArrivals : 0.0;
     recordScalar("dropRate", dropRate);
@@ -134,8 +148,12 @@ void GatewayQueue::finish()
         delete pktInService;
         pktInService = nullptr;
     }
-    while (!buffer.empty()) {
-        delete buffer.front();
-        buffer.pop();
+    while (!alarmBuffer.empty()) {
+        delete alarmBuffer.front();
+        alarmBuffer.pop();
+    }
+    while (!telemetryBuffer.empty()) {
+        delete telemetryBuffer.front();
+        telemetryBuffer.pop();
     }
 }
