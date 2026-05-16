@@ -45,32 +45,8 @@ simulation results to validate the model, as required by the submission guidelin
 
 ## System Architecture
 
-```
-  Zone A (nodes 0-3)          Zone B (nodes 4-7)
-  ┌────────────────┐          ┌────────────────┐
-  │ node[0]        │          │ node[4]        │
-  │ node[1]  ──►  gatewayQueue[0]              │
-  │ node[2]        │          │ node[5]        │
-  │ node[3]        │          │ node[6]  ──►  gatewayQueue[1]
-  └────────────────┘          │ node[7]        │
-                              └────────────────┘
-        gatewayQueue[0] ──── 100 Mbps / 5 ms ────► server
-        gatewayQueue[1] ──── 100 Mbps / 5 ms ────► server
-                                                      ▲
-                                                   FireGen
-                                          (Poisson fire event source)
-```
+<img width="723" height="346" alt="image" src="https://github.com/user-attachments/assets/bd885e7a-c314-4343-bb7b-842afc87c0a5" />
 
-| Layer | Module | Role |
-|---|---|---|
-| Sensor | `SensorApp` | Generates Exp-distributed telemetry and Bernoulli alarms |
-| LoRa RF | FLoRa `LoRaMedium` | Log-normal shadowing path-loss model |
-| Gateway | `GatewayQueue` | M/M/1/K priority queue — alarms before telemetry |
-| Backhaul | INET `EthernetLink` | 100 Mbps, 5 ms point-to-point to server |
-| Server | `FireServer` | Counts and timestamps every received packet |
-| Fire source | `FireGen` | Poisson process, notifies sensors in affected zone(s) |
-
----
 
 ## Stochastic Models
 
