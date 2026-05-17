@@ -98,7 +98,7 @@ THEORY = {
 def parse_sca(path):
     config = itervar = ""
     scalars = []   # list of (module, name, value)
-    with open(path) as f:
+    with open(path, encoding='utf-8', errors='ignore') as f:
         for line in f:
             line = line.strip()
             if line.startswith("attr configname"):
