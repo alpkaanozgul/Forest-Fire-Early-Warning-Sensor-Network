@@ -204,37 +204,25 @@ Sample output sections:
 
 ### M/M/1/K Steady-State Formulas Used for Validation
 
-**Utilization:**
-$$
-\rho = \frac{\lambda}{\mu}
-$$
+```
 
-**Probabilities:**
-$$
-P_0 = \frac{1 - \rho}{1 - \rho^{K+1}} \quad (\rho \neq 1)
-$$
-$$
-P_n = P_0 \cdot \rho^n
-$$
+ρ  = λ / μ
 
-**System & Queue Lengths:**
-$$
-L = \sum_{n=0}^{K} n \cdot P_n
-$$
-$$
-L_q = L - (1 - P_0)
-$$
+P0 = (1 − ρ) / (1 − ρ^(K+1))       [ρ ≠ 1]
 
-**Throughput & Times (Little's Law):**
-$$
-\lambda_{\text{eff}} = \lambda \cdot (1 - P_K)
-$$
-$$
-W_q = \frac{L_q}{\lambda_{\text{eff}}}
-$$
-$$
-W = \frac{L}{\lambda_{\text{eff}}}
-$$
+Pn = P0 · ρ^n
+
+L  = Σ n·Pn   (n = 0..K)
+
+λ_eff = λ · (1 − P_K)
+
+Lq = L − (1 − P0)
+
+Wq = Lq / λ_eff
+
+W  = L  / λ_eff
+
+```
 
 ---
 
