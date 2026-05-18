@@ -4,7 +4,7 @@
 **Institution:** METU Northern Cyprus Campus  
 **Authors:** Alp Kaan Özgül (2638096) · Yasin Bora Buğdacı (2584753)
 
-> This project implements the simulation described in `2638096_2584753.pdf` and was
+> This project implements the simulation described in `INTERIM_REPORT.pdf` and was
 > developed following the requirements in `Final Project Report Submission Guidelines.pdf`.
 
 ---
@@ -31,7 +31,7 @@
 ForestFireSim is a discrete-event simulation (DES) built with **OMNeT++ 6.2** that models a
 LoRa/LoRaWAN-based forest fire early warning sensor network.
 
-The system is motivated by the proposal in `2638096_2584753.pdf`: deploying low-power wireless
+The system is motivated by the proposal in `INTERIM_REPORT.pdf`: deploying low-power wireless
 sensors across a forested area to detect fire events (elevated temperature, smoke, humidity drop)
 and relay alarms to a central monitoring server through LoRa gateways. The simulation lets us
 measure key quality-of-service metrics — packet delivery ratio, end-to-end alarm delay, gateway
@@ -259,7 +259,7 @@ ForestFireSim/
 │   ├── analyse.py              Python analysis: CI95, theory vs sim
 │   └── results/                .sca scalar files (git-tracked)
 │       └── *.sca
-├── 2638096_2584753.pdf         Project proposal
+├── INTERIM_REPORT.pdf         Project proposal
 ├── Final Project Report Submission Guidelines.pdf
 ├── architecture.png            System diagram
 ├── Makefile
